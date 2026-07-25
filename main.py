@@ -94,10 +94,14 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:5173",  # keep for local development
+        os.getenv("FRONTEND_URL", "")  # NEW: will be set as an env var on Render
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 class AnnotationCreate(BaseModel):
     filename: str
     page_number: str
