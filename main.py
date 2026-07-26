@@ -23,7 +23,7 @@ load_dotenv()
 
 # --- NEW: imports for the RAG pipeline ---
 import chromadb
-from sentence_transformers import SentenceTransformer
+import requests
 
 
 def init_db():
@@ -125,7 +125,15 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # --- NEW: load embedding model + set up ChromaDB ONCE, at startup ---
 # This runs a single time when uvicorn starts, not on every request.
 print("Loading embedding model...")
-embed_model = SentenceTransformer("all-MiniLM-L6-v2")
+HF_API_URL = "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction"
+HF_HEADERS = {"Authorization": f"Bearer {os.getenv('HF_API_TOKEN')}"}
+
+def get_embeddings(texts):
+    response = requests.post(HF_API_URL, headers=HF_HEADERS, json={"inputs": texts, "options": {"wait_for_model": True}})
+    if response.status_code != 200:
+        print(f"HF API error {response.status_code}: {response.text}")  # NEW: see the real reason
+    response.raise_for_status()
+    return response.json()
 
 chroma_client = chromadb.PersistentClient(path="chroma_db")
 collection = chroma_client.get_or_create_collection(name="pdf_chunks")
@@ -236,7 +244,7 @@ async def upload_pdf(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="No readable text found in this PDF. It may be a scanned image without OCR.")
 
     texts = [chunk.page_content for chunk in chunks]
-    embeddings = embed_model.encode(texts).tolist()
+    embeddings = get_embeddings(texts)
 
     ids = [f"{file.filename}_chunk_{i}" for i in range(len(chunks))]
     metadatas = [chunk.metadata for chunk in chunks]
@@ -272,7 +280,7 @@ def chat(request: ChatRequest):
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
 
-    query_embedding = embed_model.encode(request.question).tolist()
+    query_embedding = get_embeddings([request.question])[0]
 
     results = collection.query(
         query_embeddings=[query_embedding],
