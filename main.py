@@ -135,6 +135,11 @@ def get_embeddings(texts):
     response.raise_for_status()
     return response.json()
 
+print("Setting up ChromaDB...")
+chroma_client = chromadb.PersistentClient(path="chroma_db")
+collection = chroma_client.get_or_create_collection(name="pdf_chunks")
+print("ChromaDB ready.")
+
 chroma_client = chromadb.PersistentClient(path="chroma_db")
 collection = chroma_client.get_or_create_collection(name="pdf_chunks")
 print("Embedding model and ChromaDB ready.")
