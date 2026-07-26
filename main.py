@@ -1,3 +1,8 @@
+print("=== main.py is starting to execute ===")
+
+from fastapi import FastAPI, UploadFile, File, HTTPException
+
+
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
