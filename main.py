@@ -16,6 +16,7 @@ from typing import List
 import sqlite3
 from datetime import datetime
 import chromadb
+from chromadb.utils import embedding_functions
 import requests
 
 print("=== Imports finished ===")
@@ -147,13 +148,14 @@ def get_embeddings(texts):
 
 print("Setting up ChromaDB...")
 chroma_client = chromadb.PersistentClient(path="chroma_db")
-collection = chroma_client.get_or_create_collection(name="pdf_chunks")
+collection = chroma_client.get_or_create_collection(
+    name="pdf_chunks",
+    embedding_function=None  # NEW: we always supply embeddings ourselves, don't load Chroma's default model
+)
 
 print("=== ChromaDB ready ===")
 
-chroma_client = chromadb.PersistentClient(path="chroma_db")
-collection = chroma_client.get_or_create_collection(name="pdf_chunks")
-print("Embedding model and ChromaDB ready.")
+
 
 groq_client = OpenAI(
     api_key=os.getenv("GROQ_API_KEY"),
