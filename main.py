@@ -1,8 +1,5 @@
 print("=== main.py is starting to execute ===")
-
 from fastapi import FastAPI, UploadFile, File, HTTPException
-
-
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -18,18 +15,17 @@ from fastapi.responses import FileResponse
 from typing import List
 import sqlite3
 from datetime import datetime
-
-# --- NEW: SQLite setup, runs once at startup ---
-DB_PATH = "annotations.db"
-MAX_FILE_SIZE_MB = 20
-
-
-load_dotenv()
-
-# --- NEW: imports for the RAG pipeline ---
 import chromadb
 import requests
 
+print("=== Imports finished ===")
+
+
+MAX_FILE_SIZE_MB = 20
+
+load_dotenv()
+
+DB_PATH = "annotations.db"
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -58,6 +54,10 @@ def init_db():
 
     conn.commit()
     conn.close()
+
+init_db()
+print("=== SQLite init done ===")
+
 
 def generate_summary(chunks):
     # Use a sample of chunks (first ~10) to keep the prompt reasonably sized,
@@ -93,7 +93,7 @@ Document excerpt:
     parsed = json.loads(raw)
     return parsed["summary"], parsed["topics"]
 
-init_db()
+
 
 app = FastAPI()
 
@@ -106,6 +106,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+print("=== CORS configured ===")
 
 class AnnotationCreate(BaseModel):
     filename: str
@@ -127,6 +129,9 @@ class ChatRequest(BaseModel):
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+print("=== Upload dir ready ===")
+
+
 # --- NEW: load embedding model + set up ChromaDB ONCE, at startup ---
 # This runs a single time when uvicorn starts, not on every request.
 print("Loading embedding model...")
@@ -143,7 +148,8 @@ def get_embeddings(texts):
 print("Setting up ChromaDB...")
 chroma_client = chromadb.PersistentClient(path="chroma_db")
 collection = chroma_client.get_or_create_collection(name="pdf_chunks")
-print("ChromaDB ready.")
+
+print("=== ChromaDB ready ===")
 
 chroma_client = chromadb.PersistentClient(path="chroma_db")
 collection = chroma_client.get_or_create_collection(name="pdf_chunks")
@@ -153,6 +159,8 @@ groq_client = OpenAI(
     api_key=os.getenv("GROQ_API_KEY"),
     base_url="https://api.groq.com/openai/v1"
 )
+
+print("=== Groq client ready ===")
 
 @app.post("/annotations")
 def create_annotation(annotation: AnnotationCreate):
